@@ -157,6 +157,7 @@ local function actStay(n)   MB.BotCmd(n, "stay");   MB.Log(n .. ": bleibt stehen
 local function actAttack(n) MB.BotCmd(n, "attack"); MB.Log(n .. ": greift dein Ziel an") end
 local function actVendor(n) MB.BotCmd(n, "sell vendor"); MB.Log(n .. ": geht zum Haendler") end
 local function actRepair(n) MB.BotCmd(n, "repair"); MB.Log(n .. ": repariert") end
+local function actSummon(n) MB.BotCmd(n, "summon"); MB.Log(n .. ": zu dir gerufen (summon)") end
 local function setRole(n, r)
   MB.BotCmd(n, "co +" .. r)
   MB.Log(n .. ": Rolle -> " .. (ROLE_LABEL[r] or r))
@@ -188,6 +189,7 @@ local function botContext(name)
     { label = "Folgen", func = function() actFollow(name) end },
     { label = "Stehen bleiben", func = function() actStay(name) end },
     { label = "Mein Ziel angreifen", func = function() actAttack(name) end },
+    { label = "Zu mir rufen (Summon)", func = function() actSummon(name) end },
     { sep = true },
     { label = "Rolle: Tank", func = function() setRole(name, "tank") end },
     { label = "Rolle: Heiler", func = function() setRole(name, "heal") end },
@@ -606,14 +608,16 @@ local function buildFrame()
   -- Per-Bot-Steuerung (rechts, wirkt auf den GEWAEHLTEN Bot) -- zwei Reihen
   local function detBtn(label, w) return makeButton(detail, label, w or 70, 20) end
   -- Reihe 1: Aktionen
-  detail.aFollow = detBtn("Folgen");         detail.aFollow:SetPoint("BOTTOMLEFT", 10, 34)
-  detail.aStop   = detBtn("Stopp");          detail.aStop:SetPoint("LEFT", detail.aFollow, "RIGHT", 3, 0)
-  detail.aAtk    = detBtn("Angriff");        detail.aAtk:SetPoint("LEFT", detail.aStop, "RIGHT", 3, 0)
-  detail.aVend   = detBtn("Vendor");         detail.aVend:SetPoint("LEFT", detail.aAtk, "RIGHT", 3, 0)
-  detail.aRep    = detBtn("Reparieren", 84); detail.aRep:SetPoint("LEFT", detail.aVend, "RIGHT", 3, 0)
+  detail.aFollow = detBtn("Folgen", 56);      detail.aFollow:SetPoint("BOTTOMLEFT", 10, 34)
+  detail.aStop   = detBtn("Stopp", 52);       detail.aStop:SetPoint("LEFT", detail.aFollow, "RIGHT", 3, 0)
+  detail.aAtk    = detBtn("Angriff", 58);     detail.aAtk:SetPoint("LEFT", detail.aStop, "RIGHT", 3, 0)
+  detail.aSummon = detBtn("Summon", 60);      detail.aSummon:SetPoint("LEFT", detail.aAtk, "RIGHT", 3, 0)
+  detail.aVend   = detBtn("Vendor", 56);      detail.aVend:SetPoint("LEFT", detail.aSummon, "RIGHT", 3, 0)
+  detail.aRep    = detBtn("Reparieren", 72);  detail.aRep:SetPoint("LEFT", detail.aVend, "RIGHT", 3, 0)
   detail.aFollow:SetScript("OnClick", function() if UI.selected then actFollow(UI.selected) end end)
   detail.aStop:SetScript("OnClick",   function() if UI.selected then actStay(UI.selected) end end)
   detail.aAtk:SetScript("OnClick",    function() if UI.selected then actAttack(UI.selected) end end)
+  detail.aSummon:SetScript("OnClick", function() if UI.selected then actSummon(UI.selected) end end)
   detail.aVend:SetScript("OnClick",   function() if UI.selected then actVendor(UI.selected) end end)
   detail.aRep:SetScript("OnClick",    function() if UI.selected then actRepair(UI.selected) end end)
   -- Reihe 2: Rolle / Grind / Reset
@@ -634,13 +638,13 @@ local function buildFrame()
   local glbl = frame.groupbar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   glbl:SetPoint("LEFT", 2, 0); glbl:SetText("|cffd8b862Alle:|r")
   local groupActs = {
-    { "Folgen", "follow" }, { "Stopp", "stay" }, { "Angriff", "attack" },
+    { "Folgen", "follow" }, { "Stopp", "stay" }, { "Angriff", "attack" }, { "Summon", "summon" },
     { "Grind", "grind" }, { "Vendor", "sell vendor" }, { "Reparieren", "repair" },
   }
   local gx = 38
   for _, a in ipairs(groupActs) do
-    local b = makeButton(frame.groupbar, a[1], 84, 22)
-    b:SetPoint("LEFT", gx, 0); gx = gx + 86
+    local b = makeButton(frame.groupbar, a[1], 78, 22)
+    b:SetPoint("LEFT", gx, 0); gx = gx + 80
     local cmd = a[2]
     b:SetScript("OnClick", function() MB.PartyCmd(cmd); MB.Log("Alle: " .. cmd); MB.After(0.5, MB.ReqStates) end)
   end
