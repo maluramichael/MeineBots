@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: MeineBots
+## Notes: Einfaches Playerbot-Management (Liste, Detail, Verwaltung) ueber die MultiBot-Bridge
+## Author: Michael Malura
+## Version: 0.1.0
+## SavedVariables: MeineBotsDB
+
+Comm.lua
+UI.lua
