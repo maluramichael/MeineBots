@@ -260,7 +260,7 @@ local function makeRow(i)
   r.mana:SetStatusBarColor(0.18, 0.37, 0.79); r.mana:SetMinMaxValues(0, 100)
 
   r.strat = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  r.strat:SetPoint("BOTTOMLEFT", 12, 6); r.strat:SetPoint("RIGHT", -12, 0)
+  r.strat:SetPoint("BOTTOMLEFT", 12, 5)   -- kein RIGHT-Anker -> einzeilig, kein Umbruch
   r.strat:SetJustifyH("LEFT")
 
   r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -288,6 +288,7 @@ local function refreshList()
     local st = MB.states[b.name]
     local grind = isGrinding(b.name)
     local line = st and ((st.combat or "") .. "  |  " .. (st.noncombat or "")) or "(keine Strategie-Daten)"
+    if #line > 52 then line = line:sub(1, 52) .. "..." end   -- einzeilig halten
     if grind and not MB.grindMode then
       r.strat:SetText("|cffff5555" .. line .. "  [!]|r"); r.warn:Show(); warns = warns + 1
     else
@@ -298,7 +299,7 @@ local function refreshList()
     r:Show()
   end
   for i = #MB.roster + 1, #rowFrames do rowFrames[i]:Hide() end
-  if list.empty then list.empty:SetShown(#MB.roster == 0) end
+  if list.empty then if #MB.roster == 0 then list.empty:Show() else list.empty:Hide() end end
   if statusFS then
     statusFS:SetText((MB.bridge.connected and "|cff4fc76aBridge verbunden|r" or "|cffff5555Bridge nicht verbunden|r")
       .. "  -  " .. #MB.roster .. " Bots" .. (warns > 0 and ("  -  |cffff5555" .. warns .. " auffaellig|r") or ""))
@@ -431,9 +432,9 @@ end
 -- ---------------------------------------------------------------- Fenster
 local function switchView(v)
   UI.view = v
-  frame.viewBots:SetShown(v == "bots")
-  frame.viewManage:SetShown(v == "manage")
-  frame.actionbar:SetShown(v == "bots")
+  if v == "bots" then frame.viewBots:Show() else frame.viewBots:Hide() end
+  if v == "manage" then frame.viewManage:Show() else frame.viewManage:Hide() end
+  if v == "bots" then frame.actionbar:Show() else frame.actionbar:Hide() end
   if v == "bots" then frame.navBots:LockHighlight(); frame.navManage:UnlockHighlight()
   else frame.navManage:LockHighlight(); frame.navBots:UnlockHighlight() end
   closeMenu()
