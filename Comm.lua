@@ -106,7 +106,7 @@ end
 
 -- ---------------------------------------------------------------- Reads (Bridge)
 function MB.ReqRoster() MB.Send("GET", "ROSTER") end
-function MB.ReqStates() MB.Send("GET", "STATES") end
+function MB.ReqStates() MB.Send("GET", "STATES~" .. MB.NewToken("st")) end  -- framed (STATE_FRAMING_V1)
 function MB.ReqInventory(name) if name then MB.Send("GET", "INVENTORY~" .. name .. "~" .. MB.NewToken("inv")) end end
 function MB.ReqQuests(name) if name then MB.Send("GET", "QUESTS~ALL~" .. name .. "~" .. MB.NewToken("q")) end end
 
@@ -175,9 +175,38 @@ function MB.OnMessage(message)
     parseRoster(rest)
 
   elseif op == "STATE" then
+    -- Legacy (unframed) -- nur als Fallback; kann bei langen Strategien STATE_TOO_LONG werfen
     local name, combat, noncombat = strsplit("~", rest, 3)
     if name then
       MB.states[name] = { combat = combat or "", noncombat = noncombat or "" }
+      MB.Emit("state", name)
+    end
+
+  elseif op == "STATES_BEGIN" or op == "STATES_END" then
+    -- Rahmen der Gesamtabfrage -- nichts zu tun
+
+  elseif op == "STATE_BEGIN" then
+    local _tok, name = strsplit("~", rest, 4)
+    if name then MB.states[name] = { combat = "", noncombat = "", _c = {}, _n = {} } end
+
+  elseif op == "STATE_ITEM" then
+    local _tok, name, scope, _idx, strat = strsplit("~", rest, 5)
+    local st = name and MB.states[name]
+    if st then
+      strat = dec(strat)
+      if scope and scope:lower():find("non") then
+        st._n = st._n or {}; table.insert(st._n, strat)
+      else
+        st._c = st._c or {}; table.insert(st._c, strat)
+      end
+    end
+
+  elseif op == "STATE_END" then
+    local _tok, name = strsplit("~", rest, 4)
+    local st = name and MB.states[name]
+    if st then
+      st.combat = table.concat(st._c or {}, ", ")
+      st.noncombat = table.concat(st._n or {}, ", ")
       MB.Emit("state", name)
     end
 
