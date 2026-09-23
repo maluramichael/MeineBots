@@ -162,15 +162,11 @@ local function setRole(n, r)
   MB.Log(n .. ": Rolle -> " .. (ROLE_LABEL[r] or r))
   MB.After(0.4, MB.ReqStates)
 end
-local function toggleGrind(n)
-  if isGrinding(n) then MB.BotCmd(n, "nc -grind"); MB.Log(n .. ": Grinden AUS")
-  else MB.BotCmd(n, "nc +grind"); MB.Log(n .. ": Grinden AN") end
-  MB.After(0.4, MB.ReqStates)
-end
+local function startGrind(n) MB.BotCmd(n, "grind"); MB.Log(n .. ": grindet  (Stoppen: Folgen)"); MB.After(0.4, MB.ReqStates) end
+local function toggleGrind(n) startGrind(n) end   -- Playerbots: "grind" startet; Folgen/Stopp beendet
 local function resetStrats(n)
-  MB.BotCmd(n, "nc -grind")
-  MB.BotCmd(n, "nc +follow")
-  MB.Log(n .. ": Strategien auf Standard zurueckgesetzt")
+  MB.BotCmd(n, "follow")
+  MB.Log(n .. ": zurueck auf Folgen (Grind gestoppt)")
   MB.After(0.4, MB.ReqStates)
 end
 local function removeBot(n)
@@ -186,7 +182,6 @@ end
 
 -- ---------------------------------------------------------------- Bot-Rechtsklick
 local function botContext(name)
-  local grind = isGrinding(name)
   showMenu({
     { label = "Auswaehlen / Details", func = function() UI.Select(name) end },
     { sep = true },
@@ -200,8 +195,8 @@ local function botContext(name)
     { sep = true },
     { label = "Zum Haendler", func = function() actVendor(name) end },
     { label = "Reparieren", func = function() actRepair(name) end },
-    { label = grind and "Grinden stoppen" or "Grinden starten", func = function() toggleGrind(name) end },
-    { label = "Strategien-Reset", func = function() resetStrats(name) end },
+    { label = "Grinden  (Stoppen: Folgen)", func = function() startGrind(name) end },
+    { label = "Zurueck auf Folgen", func = function() resetStrats(name) end },
     { sep = true },
     { label = "Aus Gruppe entlassen", r = 0.95, g = 0.45, b = 0.35, func = function() removeBot(name) end },
   }, name)
@@ -210,7 +205,12 @@ end
 -- ---------------------------------------------------------------- Item-/Quest-Rechtsklick
 local function itemContext(item)
   showMenu({
-    { label = "Im Chat verlinken", func = function() if item.link and ChatEdit_InsertLink then ChatEdit_InsertLink(item.link) end end },
+    { label = "Im Chat verlinken", func = function()
+        local lnk = item.link
+        if not lnk then MB.Print("kein Item-Link vorhanden"); return end
+        if not (ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow()) then ChatFrame_OpenChat("") end
+        ChatEdit_InsertLink(lnk)
+      end },
     { sep = true },
     { label = "Handel mit mir  (Phase 2)", disabled = true },
     { label = "Verkaufen  (Phase 2)", disabled = true },
@@ -444,7 +444,6 @@ local function switchView(v)
   UI.view = v
   if v == "bots" then frame.viewBots:Show() else frame.viewBots:Hide() end
   if v == "manage" then frame.viewManage:Show() else frame.viewManage:Hide() end
-  if v == "bots" then frame.actionbar:Show() else frame.actionbar:Hide() end
   if frame.groupbar then if v == "bots" then frame.groupbar:Show() else frame.groupbar:Hide() end end
   if v == "bots" then frame.navBots:LockHighlight(); frame.navManage:UnlockHighlight()
   else frame.navManage:LockHighlight(); frame.navBots:UnlockHighlight() end
@@ -467,7 +466,7 @@ end
 local function buildManage()
   manage = CreateFrame("Frame", nil, frame)
   manage:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -96)
-  manage:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 40)
+  manage:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 64)
 
   local head = manage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   head:SetPoint("TOPLEFT", 0, 0); head:SetText("Verwaltung")
@@ -552,7 +551,7 @@ local function buildFrame()
   -- View: Meine Bots
   frame.viewBots = CreateFrame("Frame", nil, frame)
   frame.viewBots:SetPoint("TOPLEFT", 14, -88)
-  frame.viewBots:SetPoint("BOTTOMRIGHT", -14, 92)
+  frame.viewBots:SetPoint("BOTTOMRIGHT", -14, 64)
 
   list = CreateFrame("Frame", nil, frame.viewBots)
   list:SetPoint("TOPLEFT", 0, 0); list:SetPoint("BOTTOMLEFT", 0, 0); list:SetWidth(340)
@@ -585,7 +584,7 @@ local function buildFrame()
   detailTabBtn("quests", "Quests", 176)
 
   detail.body = CreateFrame("Frame", nil, detail)
-  detail.body:SetPoint("TOPLEFT", 10, -78); detail.body:SetPoint("BOTTOMRIGHT", -10, 36)  -- ueber den Rollen-Buttons
+  detail.body:SetPoint("TOPLEFT", 10, -78); detail.body:SetPoint("BOTTOMRIGHT", -10, 60)  -- ueber den zwei Button-Reihen
 
   detail.txt = detail.body:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   detail.txt:SetPoint("TOPLEFT", 4, -4); detail.txt:SetPoint("RIGHT", -4, 0); detail.txt:SetJustifyH("LEFT")
@@ -604,48 +603,48 @@ local function buildFrame()
   detail.questHost.info:SetPoint("TOPLEFT", 6, -4); detail.questHost.info:SetPoint("RIGHT", -6, 0); detail.questHost.info:SetJustifyH("LEFT")
   detail.questHost:Hide()
 
-  -- Rollen + Grind + Reset + Refresh
-  local role = frame.viewBots  -- Buttons unten in der Detailspalte
-  detail.roleTank = makeButton(detail, "Tank", 60, 20);   detail.roleTank:SetPoint("BOTTOMLEFT", 10, 8)
-  detail.roleHeal = makeButton(detail, "Heiler", 60, 20); detail.roleHeal:SetPoint("LEFT", detail.roleTank, "RIGHT", 4, 0)
-  detail.roleDps  = makeButton(detail, "DPS", 60, 20);    detail.roleDps:SetPoint("LEFT", detail.roleHeal, "RIGHT", 4, 0)
-  detail.grind    = makeButton(detail, "Grind", 60, 20);  detail.grind:SetPoint("LEFT", detail.roleDps, "RIGHT", 10, 0)
-  detail.reset    = makeButton(detail, "Reset", 70, 20);  detail.reset:SetPoint("LEFT", detail.grind, "RIGHT", 4, 0)
+  -- Per-Bot-Steuerung (rechts, wirkt auf den GEWAEHLTEN Bot) -- zwei Reihen
+  local function detBtn(label, w) return makeButton(detail, label, w or 70, 20) end
+  -- Reihe 1: Aktionen
+  detail.aFollow = detBtn("Folgen");         detail.aFollow:SetPoint("BOTTOMLEFT", 10, 34)
+  detail.aStop   = detBtn("Stopp");          detail.aStop:SetPoint("LEFT", detail.aFollow, "RIGHT", 3, 0)
+  detail.aAtk    = detBtn("Angriff");        detail.aAtk:SetPoint("LEFT", detail.aStop, "RIGHT", 3, 0)
+  detail.aVend   = detBtn("Vendor");         detail.aVend:SetPoint("LEFT", detail.aAtk, "RIGHT", 3, 0)
+  detail.aRep    = detBtn("Reparieren", 84); detail.aRep:SetPoint("LEFT", detail.aVend, "RIGHT", 3, 0)
+  detail.aFollow:SetScript("OnClick", function() if UI.selected then actFollow(UI.selected) end end)
+  detail.aStop:SetScript("OnClick",   function() if UI.selected then actStay(UI.selected) end end)
+  detail.aAtk:SetScript("OnClick",    function() if UI.selected then actAttack(UI.selected) end end)
+  detail.aVend:SetScript("OnClick",   function() if UI.selected then actVendor(UI.selected) end end)
+  detail.aRep:SetScript("OnClick",    function() if UI.selected then actRepair(UI.selected) end end)
+  -- Reihe 2: Rolle / Grind / Reset
+  detail.roleTank = detBtn("Tank", 58);   detail.roleTank:SetPoint("BOTTOMLEFT", 10, 8)
+  detail.roleHeal = detBtn("Heiler", 58); detail.roleHeal:SetPoint("LEFT", detail.roleTank, "RIGHT", 3, 0)
+  detail.roleDps  = detBtn("DPS", 58);    detail.roleDps:SetPoint("LEFT", detail.roleHeal, "RIGHT", 3, 0)
+  detail.grind    = detBtn("Grind", 58);  detail.grind:SetPoint("LEFT", detail.roleDps, "RIGHT", 8, 0)
+  detail.reset    = detBtn("Reset", 66);  detail.reset:SetPoint("LEFT", detail.grind, "RIGHT", 3, 0)
   detail.roleTank:SetScript("OnClick", function() if UI.selected then setRole(UI.selected, "tank") end end)
   detail.roleHeal:SetScript("OnClick", function() if UI.selected then setRole(UI.selected, "heal") end end)
   detail.roleDps:SetScript("OnClick",  function() if UI.selected then setRole(UI.selected, "dps") end end)
-  detail.grind:SetScript("OnClick",    function() if UI.selected then toggleGrind(UI.selected) end end)
+  detail.grind:SetScript("OnClick",    function() if UI.selected then startGrind(UI.selected) end end)
   detail.reset:SetScript("OnClick",    function() if UI.selected then resetStrats(UI.selected) end end)
 
-  -- Gruppen-Leiste (wirkt auf ALLE eigenen Bots per Party-/Raid-Chat -- wie MultiBot)
+  -- EINE Leiste unten -- wirkt auf ALLE eigenen Bots (Party-/Raid-Chat, wie MultiBot)
   frame.groupbar = CreateFrame("Frame", nil, frame)
-  frame.groupbar:SetPoint("BOTTOMLEFT", 14, 62); frame.groupbar:SetPoint("BOTTOMRIGHT", -14, 62); frame.groupbar:SetHeight(22)
+  frame.groupbar:SetPoint("BOTTOMLEFT", 14, 34); frame.groupbar:SetPoint("BOTTOMRIGHT", -14, 34); frame.groupbar:SetHeight(24)
   local glbl = frame.groupbar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   glbl:SetPoint("LEFT", 2, 0); glbl:SetText("|cffd8b862Alle:|r")
   local groupActs = {
     { "Folgen", "follow" }, { "Stopp", "stay" }, { "Angriff", "attack" },
-    { "Grind AN", "nc +grind" }, { "Grind AUS", "nc -grind" },
+    { "Grind", "grind" }, { "Vendor", "sell vendor" }, { "Reparieren", "repair" },
   }
-  local gx = 46
+  local gx = 38
   for _, a in ipairs(groupActs) do
-    local b = makeButton(frame.groupbar, a[1], 96, 22)
-    b:SetPoint("LEFT", gx, 0); gx = gx + 100
+    local b = makeButton(frame.groupbar, a[1], 84, 22)
+    b:SetPoint("LEFT", gx, 0); gx = gx + 86
     local cmd = a[2]
-    b:SetScript("OnClick", function() MB.PartyCmd(cmd); MB.Log("Gruppe: " .. cmd); MB.After(0.5, MB.ReqStates) end)
+    b:SetScript("OnClick", function() MB.PartyCmd(cmd); MB.Log("Alle: " .. cmd); MB.After(0.5, MB.ReqStates) end)
   end
-
-  -- Aktionsleiste unten (wirkt auf den GEWAEHLTEN Bot)
-  frame.actionbar = CreateFrame("Frame", nil, frame)
-  frame.actionbar:SetPoint("BOTTOMLEFT", 14, 34); frame.actionbar:SetPoint("BOTTOMRIGHT", -14, 34); frame.actionbar:SetHeight(26)
-  local acts = { { "Folgen", actFollow }, { "Stopp", actStay }, { "Angriff", actAttack }, { "Vendor", actVendor }, { "Reparieren", actRepair } }
-  local ax = 0
-  for _, a in ipairs(acts) do
-    local b = makeButton(frame.actionbar, a[1], 96, 22)
-    b:SetPoint("LEFT", ax, 0); ax = ax + 100
-    local fn = a[2]
-    b:SetScript("OnClick", function() if UI.selected then fn(UI.selected) end end)
-  end
-  local refresh = makeButton(frame.actionbar, "Aktualisieren", 110, 22)
+  local refresh = makeButton(frame.groupbar, "Aktualisieren", 96, 22)
   refresh:SetPoint("RIGHT", 0, 0)
   refresh:SetScript("OnClick", function() MB.RefreshAll(); MB.Log("Aktualisiere ...") end)
 
