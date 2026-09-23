@@ -298,6 +298,7 @@ local function refreshList()
     r:Show()
   end
   for i = #MB.roster + 1, #rowFrames do rowFrames[i]:Hide() end
+  if list.empty then list.empty:SetShown(#MB.roster == 0) end
   if statusFS then
     statusFS:SetText((MB.bridge.connected and "|cff4fc76aBridge verbunden|r" or "|cffff5555Bridge nicht verbunden|r")
       .. "  -  " .. #MB.roster .. " Bots" .. (warns > 0 and ("  -  |cffff5555" .. warns .. " auffaellig|r") or ""))
@@ -544,6 +545,9 @@ local function buildFrame()
   list = CreateFrame("Frame", nil, frame.viewBots)
   list:SetPoint("TOPLEFT", 0, 0); list:SetPoint("BOTTOMLEFT", 0, 0); list:SetWidth(340)
   list:SetBackdrop(CARD); list:SetBackdropColor(0.05, 0.04, 0.02, 0.6); list:SetBackdropBorderColor(0.16, 0.13, 0.08, 1)
+  list.empty = list:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+  list.empty:SetPoint("TOP", 0, -40); list.empty:SetWidth(300); list.empty:SetJustifyH("CENTER")
+  list.empty:SetText("Keine sichtbaren Bots.\n\nSind deine Bots online und mit dir\nin einer Gruppe? Dann |cffffff00Aktualisieren|r.\n\nTipp: |cffffff00/mb debug|r zeigt die Roh-Kommunikation.")
 
   detail = CreateFrame("Frame", nil, frame.viewBots)
   detail:SetPoint("TOPLEFT", list, "TOPRIGHT", 10, 0)
@@ -623,9 +627,13 @@ local function buildFrame()
   frame.viewManage = manage
 
   frame:SetScript("OnShow", function()
-    if not MB.bridge.connected then MB.Hello() end
+    refreshList()             -- gecachtes Roster sofort zeigen
+    UI.RefreshDetail()
+    MB.Hello()                -- Handshake (idempotent) -> Bridge antwortet mit CAPS
+    MB.After(0.5, MB.RefreshAll)
+    MB.After(2.0, MB.RefreshAll)   -- Bots loggen evtl. noch ein
     scheduleRefresh()
-    MB.Log("bereit.")
+    MB.Log("bereit -- /mb debug zeigt die Roh-Kommunikation.")
   end)
 
   -- gespeicherte Position
@@ -635,11 +643,13 @@ local function buildFrame()
   end
 
   switchView("bots")
+  refreshList()
   UI.RefreshDetail()
 end
 
 -- Auf Bridge-Events reagieren
 MB.On("roster", function()
+  if UI.selected and not MB.byName[UI.selected] then UI.selected = nil end  -- veraltete Auswahl bereinigen
   if not UI.selected and MB.roster[1] then UI.selected = MB.roster[1].name end
   refreshList(); UI.RefreshDetail()
 end)
@@ -657,7 +667,19 @@ end
 
 SLASH_MEINEBOTS1 = "/mb"
 SLASH_MEINEBOTS2 = "/meinebots"
-SlashCmdList["MEINEBOTS"] = function() UI.Toggle() end
+SlashCmdList["MEINEBOTS"] = function(msg)
+  msg = (msg or ""):lower():gsub("%s+", "")
+  if msg == "debug" then
+    MB.debug = not MB.debug
+    MB.Print("Debug " .. (MB.debug and "AN" or "AUS"))
+    if MB.debug then MB.Diag(); MB.Hello(); MB.After(0.4, MB.RefreshAll) end
+    return
+  elseif msg == "diag" then
+    MB.Diag(); MB.Hello(); MB.After(0.4, MB.RefreshAll)
+    return
+  end
+  UI.Toggle()
+end
 
 -- Minimap-Hinweis in den Chat beim ersten Login
 local loginFrame = CreateFrame("Frame")

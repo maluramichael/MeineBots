@@ -15,6 +15,11 @@ MB.VERSION = "0.1.0"
 MB.PREFIX  = "MBOT"
 MB.PROTO   = "1"
 MB.channel = "WHISPER"   -- Kanal, auf dem die Bridge lauscht (Antwort kommt per WHISPER zurueck)
+MB.debug   = false       -- /mb debug schaltet Roh-Logging in den Chat
+
+function MB.Print(text)
+  DEFAULT_CHAT_FRAME:AddMessage("|cffd8b862[MeineBots]|r " .. tostring(text))
+end
 
 MB.bridge  = { connected = false, hello = false, caps = {} }
 MB.roster  = {}          -- Array: { {name, cls, lvl, map, alive, hp, mana}, ... }
@@ -67,7 +72,21 @@ end
 function MB.Send(opcode, args)
   local msg = args and (opcode .. "~" .. args) or opcode
   local target = (MB.channel == "WHISPER") and UnitName("player") or nil
+  if MB.debug then MB.Print("TX  " .. msg:sub(1, 180) .. "  [" .. MB.channel .. "]") end
   SendAddonMessage(MB.PREFIX, msg, MB.channel, target)
+end
+
+-- Diagnose: Verbindungsstatus + Zaehler in den Chat
+function MB.Diag()
+  MB.Print("verbunden=" .. tostring(MB.bridge.connected) .. " hello=" .. tostring(MB.bridge.hello)
+    .. " kanal=" .. MB.channel .. " roster=" .. #MB.roster .. " bots")
+  local caps = {}
+  for k in pairs(MB.bridge.caps) do table.insert(caps, k) end
+  MB.Print("caps: " .. (next(caps) and table.concat(caps, ", ") or "(keine)"))
+  for _, b in ipairs(MB.roster) do
+    local st = MB.states[b.name]
+    MB.Print(" - " .. b.name .. " Lv" .. b.lvl .. " hp" .. b.hp .. (st and ("  co:" .. st.combat) or "  (kein state)"))
+  end
 end
 
 function MB.Hello()
@@ -135,6 +154,7 @@ end
 
 function MB.OnMessage(message)
   if not message or message == "" then return end
+  if MB.debug then MB.Print("RX  " .. message:sub(1, 180)) end
   local op, rest = strsplit("~", message, 2)
   rest = rest or ""
 
