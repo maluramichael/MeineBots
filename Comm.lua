@@ -99,6 +99,13 @@ function MB.BotCmd(name, cmd)
   SendChatMessage(cmd, "WHISPER", nil, name)
 end
 
+-- Playerbot-Kommando an die GANZE Gruppe (Party-Chat) -- alle eigenen Bots lesen mit (wie MultiBot)
+function MB.PartyCmd(cmd)
+  if not cmd then return end
+  local chan = (GetNumRaidMembers() > 0) and "RAID" or "PARTY"
+  SendChatMessage(cmd, chan)
+end
+
 -- .-Kommando an den Server (Verwaltung). Der Server fuehrt fuehrende "." als Befehl aus.
 function MB.Dot(cmd)
   SendChatMessage(cmd, "SAY")
@@ -109,6 +116,25 @@ function MB.ReqRoster() MB.Send("GET", "ROSTER") end
 function MB.ReqStates() MB.Send("GET", "STATES~" .. MB.NewToken("st")) end  -- framed (STATE_FRAMING_V1)
 function MB.ReqInventory(name) if name then MB.Send("GET", "INVENTORY~" .. name .. "~" .. MB.NewToken("inv")) end end
 function MB.ReqQuests(name) if name then MB.Send("GET", "QUESTS~ALL~" .. name .. "~" .. MB.NewToken("q")) end end
+
+-- Quest-Titel on-demand ueber QUEST_INFO (rate-limitiert: eine Anfrage pro ~0.5s)
+MB.questTitles = {}
+local qiQueue, qiBusy = {}, false
+local function qiPump()
+  if qiBusy or #qiQueue == 0 then return end
+  local id = table.remove(qiQueue, 1)
+  if MB.questTitles[id] then return qiPump() end
+  qiBusy = true
+  MB.Send("GET", "QUEST_INFO~" .. MB.NewToken("qi") .. "~" .. id)
+  MB.After(0.55, function() qiBusy = false; qiPump() end)
+end
+function MB.ReqQuestInfo(id)
+  id = tonumber(id)
+  if not id or MB.questTitles[id] then return end
+  for _, q in ipairs(qiQueue) do if q == id then return end end
+  table.insert(qiQueue, id)
+  qiPump()
+end
 
 function MB.RefreshAll()
   MB.ReqRoster()
@@ -240,6 +266,14 @@ function MB.OnMessage(message)
   elseif op == "QUESTS_END" then
     local name = strsplit("~", rest)
     if name then MB.Emit("quests", name) end
+
+  elseif op == "QI_HEAD" then
+    local _tok, qid, _lvl, _min, title = strsplit("~", rest, 5)
+    qid = tonumber(qid)
+    if qid then
+      MB.questTitles[qid] = dec(title)
+      MB.Emit("questinfo", qid)
+    end
 
   elseif op == "ERR" then
     MB.Emit("err", rest)

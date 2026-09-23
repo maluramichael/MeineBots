@@ -17,7 +17,7 @@ local CLASS_DE = {
   DEATHKNIGHT = "Todesritter", SHAMAN = "Schamane", MAGE = "Magier", WARLOCK = "Hexenmeister", DRUID = "Druide",
 }
 -- Deine Altbots (fuer die Verwaltung: schnell holen/entlassen)
-local KNOWN_ALTS = { "Butterblume", "Hexe", "Kloppi", "Mirakuli", "Veatel" }
+local KNOWN_ALTS = { "Butterblume", "Hexe", "Kloppi", "Meule", "Veatel", "Hammerline" }
 
 local ROLE_LABEL = { tank = "Tank", heal = "Heiler", dps = "DPS" }
 
@@ -229,38 +229,38 @@ local function questContext(q)
 end
 
 -- ---------------------------------------------------------------- Liste
-local ROW_H = 46
+local ROW_H = 52
 local function makeRow(i)
   local r = CreateFrame("Button", nil, list)
   r:SetHeight(ROW_H)
-  r:SetPoint("TOPLEFT", list, "TOPLEFT", 6, -6 - (i - 1) * (ROW_H + 4))
+  r:SetPoint("TOPLEFT", list, "TOPLEFT", 6, -6 - (i - 1) * (ROW_H + 5))
   r:SetPoint("RIGHT", list, "RIGHT", -6, 0)
   r:SetBackdrop(CARD)
   r:SetBackdropColor(0.08, 0.07, 0.04, 1)
   r:SetBackdropBorderColor(0.16, 0.13, 0.08, 1)
 
   r.warn = r:CreateTexture(nil, "OVERLAY")
-  r.warn:SetPoint("TOPLEFT", 1, -6); r.warn:SetPoint("BOTTOMLEFT", 1, 6); r.warn:SetWidth(3)
+  r.warn:SetPoint("TOPLEFT", 1, -4); r.warn:SetPoint("BOTTOMLEFT", 1, 4); r.warn:SetWidth(3)
   r.warn:SetTexture(0.82, 0.29, 0.20, 1); r.warn:Hide()
 
   r.name = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  r.name:SetPoint("TOPLEFT", 12, -7)
+  r.name:SetPoint("TOPLEFT", 12, -6)
   r.lvl = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   r.lvl:SetPoint("LEFT", r.name, "RIGHT", 6, 0)
   r.role = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  r.role:SetPoint("TOPRIGHT", -12, -7)
+  r.role:SetPoint("TOPRIGHT", -12, -6)
 
   r.hp = CreateFrame("StatusBar", nil, r)
-  r.hp:SetPoint("TOPLEFT", 12, -24); r.hp:SetPoint("RIGHT", -12, 0); r.hp:SetHeight(6)
+  r.hp:SetPoint("TOPLEFT", 12, -23); r.hp:SetPoint("RIGHT", -12, 0); r.hp:SetHeight(6)
   r.hp:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
   r.hp:SetStatusBarColor(0.18, 0.56, 0.24); r.hp:SetMinMaxValues(0, 100)
   r.mana = CreateFrame("StatusBar", nil, r)
-  r.mana:SetPoint("TOPLEFT", 12, -32); r.mana:SetPoint("RIGHT", -12, 0); r.mana:SetHeight(5)
+  r.mana:SetPoint("TOPLEFT", 12, -31); r.mana:SetPoint("RIGHT", -12, 0); r.mana:SetHeight(5)
   r.mana:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
   r.mana:SetStatusBarColor(0.18, 0.37, 0.79); r.mana:SetMinMaxValues(0, 100)
 
   r.strat = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  r.strat:SetPoint("BOTTOMLEFT", 12, 5)   -- kein RIGHT-Anker -> einzeilig, kein Umbruch
+  r.strat:SetPoint("TOPLEFT", 12, -39)     -- fester Top-Anker, kein RIGHT -> einzeilig
   r.strat:SetJustifyH("LEFT")
 
   r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -389,9 +389,19 @@ local function renderQuests(b)
       host.rows[i] = r
     end
     r:ClearAllPoints(); r:SetPoint("TOPLEFT", host, "TOPLEFT", 6, -24 - (i - 1) * 22); r:SetPoint("RIGHT", host, "RIGHT", -6, 0)
-    r.t:SetText("Quest #" .. tostring(q.id))
+    local title = MB.questTitles[q.id]
+    if title then r.t:SetText(title) else r.t:SetText("|cff888888Quest #" .. tostring(q.id) .. " ...|r"); MB.ReqQuestInfo(q.id) end
     if q.completed then r.s:SetText("|cff4fc76aabgeschlossen|r") else r.s:SetText("|cffe0a636aktiv|r") end
     r.quest = q
+    r:SetScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:AddLine(MB.questTitles[self.quest.id] or ("Quest #" .. self.quest.id), 1, 0.82, 0)
+      GameTooltip:AddLine("Quest-ID " .. self.quest.id, 0.7, 0.7, 0.7)
+      GameTooltip:AddLine(self.quest.completed and "abgeschlossen" or "aktiv", 0.6, 0.8, 1)
+      GameTooltip:AddLine("Rechtsklick: Aktionen (Phase 2)", 0.5, 0.5, 0.5)
+      GameTooltip:Show()
+    end)
+    r:SetScript("OnLeave", function() GameTooltip:Hide() end)
     r:SetScript("OnClick", function(self) questContext(self.quest) end)
     r:Show()
   end
@@ -435,6 +445,7 @@ local function switchView(v)
   if v == "bots" then frame.viewBots:Show() else frame.viewBots:Hide() end
   if v == "manage" then frame.viewManage:Show() else frame.viewManage:Hide() end
   if v == "bots" then frame.actionbar:Show() else frame.actionbar:Hide() end
+  if frame.groupbar then if v == "bots" then frame.groupbar:Show() else frame.groupbar:Hide() end end
   if v == "bots" then frame.navBots:LockHighlight(); frame.navManage:UnlockHighlight()
   else frame.navManage:LockHighlight(); frame.navBots:UnlockHighlight() end
   closeMenu()
@@ -456,7 +467,7 @@ end
 local function buildManage()
   manage = CreateFrame("Frame", nil, frame)
   manage:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -96)
-  manage:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 64)
+  manage:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 40)
 
   local head = manage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   head:SetPoint("TOPLEFT", 0, 0); head:SetText("Verwaltung")
@@ -503,7 +514,7 @@ end
 
 local function buildFrame()
   frame = CreateFrame("Frame", "MeineBotsFrame", UIParent)
-  frame:SetSize(760, 480)
+  frame:SetSize(760, 516)
   frame:SetPoint("CENTER")
   frame:SetFrameStrata("HIGH")
   frame:SetBackdrop(BACKDROP)
@@ -541,7 +552,7 @@ local function buildFrame()
   -- View: Meine Bots
   frame.viewBots = CreateFrame("Frame", nil, frame)
   frame.viewBots:SetPoint("TOPLEFT", 14, -88)
-  frame.viewBots:SetPoint("BOTTOMRIGHT", -14, 64)
+  frame.viewBots:SetPoint("BOTTOMRIGHT", -14, 92)
 
   list = CreateFrame("Frame", nil, frame.viewBots)
   list:SetPoint("TOPLEFT", 0, 0); list:SetPoint("BOTTOMLEFT", 0, 0); list:SetWidth(340)
@@ -574,7 +585,7 @@ local function buildFrame()
   detailTabBtn("quests", "Quests", 176)
 
   detail.body = CreateFrame("Frame", nil, detail)
-  detail.body:SetPoint("TOPLEFT", 10, -76); detail.body:SetPoint("BOTTOMRIGHT", -10, 10)
+  detail.body:SetPoint("TOPLEFT", 10, -78); detail.body:SetPoint("BOTTOMRIGHT", -10, 36)  -- ueber den Rollen-Buttons
 
   detail.txt = detail.body:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   detail.txt:SetPoint("TOPLEFT", 4, -4); detail.txt:SetPoint("RIGHT", -4, 0); detail.txt:SetJustifyH("LEFT")
@@ -582,8 +593,8 @@ local function buildFrame()
   detail.itemHost = CreateFrame("Frame", nil, detail.body)
   detail.itemHost:SetAllPoints()
   detail.itemHost.slots = {}
-  detail.itemHost.info = detail.itemHost:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  detail.itemHost.info:SetPoint("BOTTOMLEFT", 6, 4); detail.itemHost.info:SetPoint("RIGHT", -6, 0); detail.itemHost.info:SetJustifyH("LEFT")
+  detail.itemHost.info = detail.itemHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  detail.itemHost.info:SetPoint("TOPLEFT", 4, -2); detail.itemHost.info:SetPoint("RIGHT", -4, 0); detail.itemHost.info:SetJustifyH("LEFT")
   detail.itemHost:Hide()
 
   detail.questHost = CreateFrame("Frame", nil, detail.body)
@@ -606,9 +617,26 @@ local function buildFrame()
   detail.grind:SetScript("OnClick",    function() if UI.selected then toggleGrind(UI.selected) end end)
   detail.reset:SetScript("OnClick",    function() if UI.selected then resetStrats(UI.selected) end end)
 
-  -- Aktionsleiste unten
+  -- Gruppen-Leiste (wirkt auf ALLE eigenen Bots per Party-/Raid-Chat -- wie MultiBot)
+  frame.groupbar = CreateFrame("Frame", nil, frame)
+  frame.groupbar:SetPoint("BOTTOMLEFT", 14, 62); frame.groupbar:SetPoint("BOTTOMRIGHT", -14, 62); frame.groupbar:SetHeight(22)
+  local glbl = frame.groupbar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  glbl:SetPoint("LEFT", 2, 0); glbl:SetText("|cffd8b862Alle:|r")
+  local groupActs = {
+    { "Folgen", "follow" }, { "Stopp", "stay" }, { "Angriff", "attack" },
+    { "Grind AN", "nc +grind" }, { "Grind AUS", "nc -grind" },
+  }
+  local gx = 46
+  for _, a in ipairs(groupActs) do
+    local b = makeButton(frame.groupbar, a[1], 96, 22)
+    b:SetPoint("LEFT", gx, 0); gx = gx + 100
+    local cmd = a[2]
+    b:SetScript("OnClick", function() MB.PartyCmd(cmd); MB.Log("Gruppe: " .. cmd); MB.After(0.5, MB.ReqStates) end)
+  end
+
+  -- Aktionsleiste unten (wirkt auf den GEWAEHLTEN Bot)
   frame.actionbar = CreateFrame("Frame", nil, frame)
-  frame.actionbar:SetPoint("BOTTOMLEFT", 14, 30); frame.actionbar:SetPoint("BOTTOMRIGHT", -14, 30); frame.actionbar:SetHeight(26)
+  frame.actionbar:SetPoint("BOTTOMLEFT", 14, 34); frame.actionbar:SetPoint("BOTTOMRIGHT", -14, 34); frame.actionbar:SetHeight(26)
   local acts = { { "Folgen", actFollow }, { "Stopp", actStay }, { "Angriff", actAttack }, { "Vendor", actVendor }, { "Reparieren", actRepair } }
   local ax = 0
   for _, a in ipairs(acts) do
@@ -657,6 +685,7 @@ end)
 MB.On("state", function() refreshList(); if frame and frame:IsShown() then UI.RefreshDetail() end end)
 MB.On("inventory", function(name) if name == UI.selected and detailTab == "inv" then UI.RefreshDetail() end end)
 MB.On("quests", function(name) if name == UI.selected and detailTab == "quests" then UI.RefreshDetail() end end)
+MB.On("questinfo", function() if frame and frame:IsShown() and detailTab == "quests" then UI.RefreshDetail() end end)
 MB.On("connected", function() MB.Log("mit Bridge verbunden."); refreshList() end)
 MB.On("err", function(rest) MB.Log("|cffff5555Fehler:|r " .. tostring(rest)) end)
 
