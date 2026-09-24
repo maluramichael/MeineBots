@@ -5,7 +5,7 @@
 --
 -- Gelesen wird chatlos ueber die Bridge (ROSTER / STATES / INVENTORY / QUESTS).
 -- Gesteuert wird in v1 ueber Playerbot-Whisper-Kommandos an den Bot (co/nc/follow/...)
--- und ueber .-Kommandos an den Server (.bot add/remove, .playerbots rndbot init).
+-- und ueber .-Kommandos an den Server (.playerbots bot add/remove, .playerbots rndbot init).
 -- Die Schreib-Wege wandern spaeter auf die RUN~-Endpunkte der Bridge (Phase 2).
 
 MeineBots = MeineBots or {}

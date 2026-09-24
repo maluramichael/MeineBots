@@ -15,7 +15,7 @@ Bewusst einfach: **die wichtigen Sachen sind direkt da**, kein Menü-Graben.
 - **Meine Bots:** links die Liste (HP/Mana, Rolle, aktive Strategien mit Grind-Warnung),
   rechts das Detail. Klick wählt einen Bot, **Rechtsklick** öffnet ein Aktionsmenü
   (Folgen, Rolle, Grind, Reset, Entlassen …).
-- **Verwaltung:** Altbots holen/entlassen (`.bot add` / `.bot remove`), Flotte neu würfeln
+- **Verwaltung:** Altbots holen/entlassen (`.playerbots bot add` / `.playerbots bot remove`), Flotte neu würfeln
   (`.playerbots rndbot init`).
 
 ## Architektur
@@ -30,7 +30,7 @@ Server (mod-multibot-bridge, C++)  +  mod-playerbots
 - **Lesen (chatlos, über die Bridge):** `GET~ROSTER`, `GET~STATES`, `GET~INVENTORY`, `GET~QUESTS`.
 - **Steuern (v1):** Playerbot-Whisper-Kommandos an den Bot (`co +tank`, `nc +grind`,
   `follow`, `stay`, `attack`, `sell vendor`, `repair`) und `.`-Kommandos an den Server
-  (`.bot add/remove`, `.playerbots rndbot init`).
+  (`.playerbots bot add/remove`, `.playerbots rndbot init`).
 
 Der Draht-Kontrakt der Bridge (Auszug):
 

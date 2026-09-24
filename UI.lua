@@ -171,13 +171,13 @@ local function resetStrats(n)
   MB.After(0.4, MB.ReqStates)
 end
 local function removeBot(n)
-  MB.Dot(".bot remove " .. n)
-  MB.Log(n .. ": aus der Gruppe entlassen (.bot remove)")
+  MB.Dot(".playerbots bot remove " .. n)
+  MB.Log(n .. ": aus der Gruppe entlassen (.playerbots bot remove)")
   MB.After(0.6, MB.RefreshAll)
 end
 local function addBot(n)
-  MB.Dot(".bot add " .. n)
-  MB.Log(n .. ": in die Gruppe geholt (.bot add)")
+  MB.Dot(".playerbots bot add " .. n)
+  MB.Log(n .. ": in die Gruppe geholt (.playerbots bot add)")
   MB.After(0.6, MB.RefreshAll)
 end
 
