@@ -1,5 +1,10 @@
 # MeineBots
 
+<!-- links:start -->
+[![Support me on Ko-fi](https://malura.de/assets/badge/kofi.svg)](https://malura.de/go/kofi?ref=MeineBots)
+[![Check out my page](https://malura.de/assets/badge/malura.svg)](https://malura.de/go/site?ref=MeineBots)
+<!-- links:end -->
+
 Ein schlankes World-of-Warcraft-3.3.5a-Addon zum Verwalten von **Playerbots** — eine
 Liste aller Bots deiner Gruppe, ein Detailbereich (Inventar / Quests / Strategien) und
 ein Verwaltungs-Tab, um Bots zu holen und die Zufalls-Flotte zu steuern.
